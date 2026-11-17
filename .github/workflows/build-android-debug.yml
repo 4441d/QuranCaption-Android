@@ -1,0 +1,65 @@
+name: Build Android Debug Universal APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android-debug:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK and NDK
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Install Rust for all Android ABIs
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build universal debug APK
+        run: npx tauri android build --debug --apk --ci
+
+      - name: Locate APK
+        run: find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print
+
+      - name: Publish debug APK release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          mobile: android
+          args: --debug --apk --ci
+          tagName: QCM-1.2.41-debug
+          releaseName: 'Quran Caption Android v1.2.41 debug universal'
+          releaseBody: 'Debug universal APK for device compatibility testing. Uninstall any previous Quran Caption installation before testing because this build uses a debug signing key.'
+          releaseDraft: false
+          prerelease: true
+          generateReleaseNotes: false
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          releaseAssetNamePattern: 'QuranCaption.Android.Debug[ext]'
