@@ -1,0 +1,70 @@
+name: Build Android ARM64 Debug APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android-arm64-debug:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Configure Android version
+        run: |
+          APP_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          IFS=. read -r VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< "$APP_VERSION"
+          VERSION_CODE=$((VERSION_MAJOR * 1000000 + VERSION_MINOR * 1000 + VERSION_PATCH))
+          mkdir -p src-tauri/gen/android/app
+          printf 'tauri.android.versionName=%s\ntauri.android.versionCode=%s\n' \
+            "$APP_VERSION" "$VERSION_CODE" > src-tauri/gen/android/app/tauri.properties
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK and NDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Install Rust ARM64 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build ARM64 debug APK
+        run: npx tauri android build --debug --apk --target aarch64 --ci
+
+      - name: Publish ARM64 debug APK
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          mobile: android
+          args: --debug --apk --target aarch64 --ci
+          tagName: QCM-1.2.41-arm64-debug
+          releaseName: 'Quran Caption Android v1.2.41 ARM64 debug'
+          releaseBody: 'Smaller ARM64 debug APK for Android 10+ compatibility testing. Uninstall previous Quran Caption builds before installing because this uses a debug signing key.'
+          releaseDraft: false
+          prerelease: true
+          generateReleaseNotes: false
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          releaseAssetNamePattern: 'QuranCaption.Android.ARM64.Debug[ext]'
