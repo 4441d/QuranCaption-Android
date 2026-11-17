@@ -20,7 +20,8 @@ open class RustPlugin : Plugin<Project> {
         val defaultAbiList = listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86");
         val abiList = (findProperty("abiList") as? String)?.split(',') ?: defaultAbiList
 
-        val defaultArchList = listOf("arm64", "armv7", "x86_64", "x86");
+        // Tauri's Android runner names the 32-bit ARM flavor "arm".
+        val defaultArchList = listOf("arm64", "arm", "x86_64", "x86");
         val archList = (findProperty("archList") as? String)?.split(',') ?: defaultArchList
 
         val targetsList = (findProperty("targetList") as? String)?.split(',') ?: listOf("aarch64", "armv7", "x86_64", "i686")
