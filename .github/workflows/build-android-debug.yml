@@ -18,6 +18,15 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Configure Android version
+        run: |
+          APP_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          IFS=. read -r VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< "$APP_VERSION"
+          VERSION_CODE=$((VERSION_MAJOR * 1000000 + VERSION_MINOR * 1000 + VERSION_PATCH))
+          mkdir -p src-tauri/gen/android/app
+          printf 'tauri.android.versionName=%s\ntauri.android.versionCode=%s\n' \
+            "$APP_VERSION" "$VERSION_CODE" > src-tauri/gen/android/app/tauri.properties
+
       - name: Install Java
         uses: actions/setup-java@v4
         with:
