@@ -55,7 +55,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
 
       - name: Install frontend dependencies
         run: npm ci
@@ -87,10 +87,12 @@ jobs:
           PUBLIC_POSTHOG_HOST: ${{ secrets.PUBLIC_POSTHOG_HOST }}
         with:
           mobile: android
-          args: --apk --aab --target aarch64 --ci
+          # No --target means all Android ABIs are included in the universal APK.
+          args: --apk --aab --ci
           tagName: ${{ inputs.tag }}
           releaseName: 'Quran Caption Mobile v__VERSION__'
-          releaseBody: 'Signed APK for direct installation and Android App Bundle for Google Play distribution.'
+          releaseBody:
+            'Signed APK for direct installation and Android App Bundle for Google Play distribution.'
           releaseDraft: false
           prerelease: true
           generateReleaseNotes: true
