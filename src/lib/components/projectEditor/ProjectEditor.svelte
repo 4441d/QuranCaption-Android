@@ -10,6 +10,7 @@
 	import StyleEditor from './tabs/styleEditor/StyleEditor.svelte';
 	import Export from './tabs/export/Export.svelte';
 	import { ProjectHistoryManager } from '$lib/services/undoRedo/ProjectHistoryManager';
+	import FloatingProjectAssistant from './FloatingProjectAssistant.svelte';
 
 	const AUTOSAVE_CHECK_INTERVAL_MS = 15000;
 	const AUTOSAVE_RETRY_DELAY_MS = 3000;
@@ -179,4 +180,6 @@
 	{#if searchOverlayVisible}
 		<ProjectSearchOverlay bind:this={searchOverlay} onClose={closeProjectSearch} />
 	{/if}
-</div>
+
+	<FloatingProjectAssistant />
+	</div>
