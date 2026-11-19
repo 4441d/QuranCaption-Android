@@ -30,6 +30,7 @@ export default defineConfig({
 		port: 5173,
 		strictPort: true,
 		host: tauriDevHost || '0.0.0.0',
+		allowedHosts: ['5173-iht2u90w86abvndvxwioy-ad84edfc.sg2.manus.computer'],
 		hmr: tauriDevHost
 			? {
 					protocol: 'ws',
