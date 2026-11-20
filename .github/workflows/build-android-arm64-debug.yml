@@ -59,9 +59,9 @@ jobs:
         with:
           mobile: android
           args: --debug --apk --target aarch64 --ci
-          tagName: QCM-1.2.41-arm64-debug
-          releaseName: 'Quran Caption Android v1.2.41 ARM64 debug'
-          releaseBody: 'Smaller ARM64 debug APK for Android 10+ compatibility testing. Uninstall previous Quran Caption builds before installing because this uses a debug signing key.'
+          tagName: QCM-1.2.41-floating-assistant-arm64-debug
+          releaseName: 'Quran Caption Android v1.2.41 ARM64 debug with floating assistant'
+          releaseBody: 'ARM64 debug APK for Android 10+ compatibility testing. Includes the local floating project assistant. Uninstall previous Quran Caption builds before installing because this uses a debug signing key.'
           releaseDraft: false
           prerelease: true
           generateReleaseNotes: false
