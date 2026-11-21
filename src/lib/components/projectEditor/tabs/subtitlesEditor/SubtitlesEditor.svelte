@@ -68,6 +68,13 @@
 		lastEditedSubtitleId = editedSubtitleId;
 	});
 
+	$effect(() => {
+		const request = globalState.shared.openAutoSegmentationRequest;
+		if (request === 0) return;
+		globalState.shared.openAutoSegmentationRequest = 0;
+		autoSegmentationModalOpen = true;
+	});
+
 	/**
 	 * Applique au projet un export JSON Quranic Universal Aligner déposé.
 	 *
