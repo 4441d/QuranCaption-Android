@@ -56,6 +56,13 @@ jobs:
       - name: Locate APK
         run: find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' -print
 
+      - name: Verify APK package and Android signature
+        run: |
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose "$APK"
+          unzip -tq "$APK"
+
       - name: Publish debug APK release
         uses: tauri-apps/tauri-action@v1
         env:
@@ -63,9 +70,9 @@ jobs:
         with:
           mobile: android
           args: --debug --apk --ci
-          tagName: QCM-1.2.41-debug
-          releaseName: 'Quran Caption Android v1.2.41 debug universal'
-          releaseBody: 'Debug universal APK for device compatibility testing. Uninstall any previous Quran Caption installation before testing because this build uses a debug signing key.'
+          tagName: QCM-1.2.41-floating-assistant-universal-rev1
+          releaseName: 'Quran Caption Android v1.2.41 universal with floating assistant'
+          releaseBody: 'Universal debug APK containing ARM64, ARMv7, x86_64 and x86 native libraries. Includes the local floating project assistant. Uninstall any previous Quran Caption installation before testing because this build uses a debug signing key.'
           releaseDraft: false
           prerelease: true
           generateReleaseNotes: false
