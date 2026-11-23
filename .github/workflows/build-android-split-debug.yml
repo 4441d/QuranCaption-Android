@@ -1,0 +1,130 @@
+name: Build Android Split APKs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: QCM-1.2.41-floating-assistant-split-rev1
+
+jobs:
+  build:
+    name: Build ${{ matrix.abi }} APK
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            target: aarch64
+            rust_target: aarch64-linux-android
+          - abi: armeabi-v7a
+            target: armv7
+            rust_target: armv7-linux-androideabi
+          - abi: x86_64
+            target: x86_64
+            rust_target: x86_64-linux-android
+          - abi: x86
+            target: i686
+            rust_target: i686-linux-android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Configure Android version
+        run: |
+          APP_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          IFS=. read -r VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< "$APP_VERSION"
+          VERSION_CODE=$((VERSION_MAJOR * 1000000 + VERSION_MINOR * 1000 + VERSION_PATCH))
+          mkdir -p src-tauri/gen/android/app
+          printf 'tauri.android.versionName=%s\ntauri.android.versionCode=%s\n' \
+            "$APP_VERSION" "$VERSION_CODE" > src-tauri/gen/android/app/tauri.properties
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK and NDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - name: Install Rust target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build split debug APK
+        run: npx tauri android build --debug --apk --target ${{ matrix.target }} --ci
+
+      - name: Verify and name APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          mkdir -p release-assets
+          OUT="release-assets/QuranCaption.Android.${{ matrix.abi }}.Debug.apk"
+          cp "$APK" "$OUT"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose "$OUT"
+          unzip -tq "$OUT"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$OUT" | tee "release-assets/${{ matrix.abi }}.badging.txt"
+          sha256sum "$OUT" | tee "release-assets/${{ matrix.abi }}.sha256"
+          ls -lh "$OUT"
+
+      - name: Upload split APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-caption-${{ matrix.abi }}
+          path: release-assets/
+          if-no-files-found: error
+
+  release:
+    name: Publish four split APKs
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download split APKs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: quran-caption-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish GitHub release with four APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<'EOF'
+          Quran Caption Android v1.2.41 with the local floating assistant.
+
+          This release contains four separate debug APKs. Install only the file matching the phone CPU ABI:
+          - arm64-v8a: most modern Android phones
+          - armeabi-v7a: older 32-bit ARM phones
+          - x86_64: 64-bit Android emulators/devices
+          - x86: 32-bit Android emulators/devices
+
+          Android minimum SDK: 24, including Android 10 compatibility. These APKs use the debug signing key; uninstall a previous differently signed build before installing.
+          EOF
+          gh release create "$RELEASE_TAG" release-assets/*.apk release-assets/*.sha256 \
+            --title "Quran Caption Android v1.2.41 split APKs" \
+            --notes-file release-notes.md \
+            --prerelease
