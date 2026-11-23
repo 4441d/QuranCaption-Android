@@ -124,7 +124,7 @@ jobs:
 
           Android minimum SDK: 24, including Android 10 compatibility. These APKs use the debug signing key; uninstall a previous differently signed build before installing.
           EOF
-          gh release create "$RELEASE_TAG" release-assets/*.apk release-assets/*.sha256 \
+          gh release create "$RELEASE_TAG" --repo 4441d/QuranCaption-Android release-assets/*.apk release-assets/*.sha256 \
             --title "Quran Caption Android v1.2.41 split APKs" \
             --notes-file release-notes.md \
             --prerelease
